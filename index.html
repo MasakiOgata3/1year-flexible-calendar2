@@ -1,0 +1,2303 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1年単位変形労働時間制カレンダー作成ツール</title>
+    
+    <!-- PDF出力ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.plugin.standard_fonts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #f9fafb;
+            color: #111827;
+            line-height: 1.5;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 1.5rem;
+        }
+
+        .header-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .icon {
+            width: 2rem;
+            height: 2rem;
+            color: #2563eb;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Button */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: #f9fafb;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #374151;
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-ghost:hover {
+            background: #f3f4f6;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* Main Layout */
+        .main {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 1.5rem;
+            min-height: calc(100vh - 180px);
+        }
+
+        /* Card */
+        .card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Settings Panel */
+        .tabs {
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 0.25rem;
+        }
+
+        .tab-button.active {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .tab-button:not(.active) {
+            color: #6b7280;
+        }
+
+        .tab-button:not(.active):hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .required {
+            color: #ef4444;
+            margin-left: 0.25rem;
+        }
+
+        .input {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            color: #111827;
+            background: white;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 1px #2563eb;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .input-group .input {
+            flex: 1;
+        }
+
+        .input-group .unit {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        /* Holiday Pattern Grid */
+        .holiday-pattern-grid {
+            display: grid;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .week-pattern {
+            padding: 0.75rem;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+        }
+
+        .week-pattern-header {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.25rem;
+        }
+
+        .weekday-checkbox {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+
+        .weekday-checkbox input {
+            margin-top: 0.25rem;
+        }
+
+        /* Calendar Display */
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .calendar-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .calendar-container {
+            padding: 1rem;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .month-calendar {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+
+        .month-header {
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #111827;
+        }
+
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .calendar-table th {
+            padding: 0.5rem 0.25rem;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .calendar-table td {
+            padding: 0.25rem;
+            text-align: center;
+            position: relative;
+            height: 2.5rem;
+        }
+
+        .calendar-day {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .calendar-day:hover {
+            background: #f3f4f6;
+        }
+
+        .calendar-day.work {
+            background: white;
+            color: #111827;
+        }
+
+        .calendar-day.rest {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .calendar-day.holiday {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .calendar-day.saturday {
+            color: #2563eb;
+        }
+
+        .calendar-day.sunday {
+            color: #dc2626;
+        }
+
+        .day-number {
+            font-weight: 500;
+        }
+
+        .day-hours {
+            font-size: 0.625rem;
+            color: #6b7280;
+        }
+
+        .empty-day {
+            background: transparent;
+        }
+
+        /* Legal Check Results */
+        .legal-check {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .legal-check.pass {
+            background: #d1fae5;
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+        }
+
+        .legal-check.fail {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+        }
+
+        .legal-check-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .legal-check-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .check-icon {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        /* Statistics */
+        .statistics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .footer-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-text {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 0.5rem;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #f3f4f6;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .manual-section {
+            margin-bottom: 2rem;
+        }
+
+        .manual-section h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.75rem;
+        }
+
+        .manual-section p {
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .manual-list {
+            margin-left: 1.5rem;
+            color: #4b5563;
+        }
+
+        .manual-list li {
+            margin-bottom: 0.5rem;
+        }
+
+        .individual-adjust-section {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .adjust-controls {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .adjust-item {
+            display: grid;
+            grid-template-columns: 120px 1fr auto;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 0.375rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .adjust-date {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .adjust-select {
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .adjust-hours {
+            width: 80px;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .calendar-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .main {
+                padding: 1rem;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .calendar-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .adjust-item {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 21h18"></path>
+                    <path d="M5 21V7l8-4v18"></path>
+                    <path d="M19 21V11l-6-4"></path>
+                </svg>
+                <h1>1年単位変形労働時間制カレンダー作成ツール</h1>
+            </div>
+            
+            <nav class="nav">
+                <button class="btn btn-ghost btn-sm" onclick="saveSettings()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    設定を保存
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="loadSettings()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    設定を読込
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="exportToPDF()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    PDF出力
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="resetToDefault()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    リセット
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="showManual()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    使い方
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="grid">
+            <!-- Settings Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">設定</h2>
+                </div>
+                
+                <!-- Tab Navigation -->
+                <div class="tabs">
+                    <button class="tab-button active" onclick="switchTab('basic')">基本設定</button>
+                    <button class="tab-button" onclick="switchTab('holidays')">休日設定</button>
+                </div>
+
+                <!-- Basic Settings Tab -->
+                <div id="basic-tab" class="tab-content active">
+                    <div class="form-group">
+                        <label class="label">会社名</label>
+                        <input type="text" class="input" placeholder="会社名を入力してください" id="companyName" onchange="updateCalendar()">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="label">
+                            起算日 <span class="required">*</span>
+                        </label>
+                        <input type="date" class="input" value="2025-04-01" id="startDate" onchange="updateCalendar()">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="label">
+                            1日の所定労働時間 <span class="required">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="input" value="8" min="0" max="12" step="0.5" id="dailyHours" onchange="updateCalendar()">
+                            <span class="unit">時間</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="label">週の開始曜日</label>
+                        <select class="input" id="weekStart" onchange="updateCalendar()">
+                            <option value="sunday">日曜日</option>
+                            <option value="monday">月曜日</option>
+                            <option value="tuesday">火曜日</option>
+                            <option value="wednesday">水曜日</option>
+                            <option value="thursday">木曜日</option>
+                            <option value="friday">金曜日</option>
+                            <option value="saturday">土曜日</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Holiday Settings Tab -->
+                <div id="holidays-tab" class="tab-content">
+                    <div class="form-group">
+                        <label class="label">祝日の扱い</label>
+                        <div style="margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                                <input type="checkbox" id="includeNationalHolidays" checked onchange="updateCalendar()">
+                                祝日を休日とする
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="label">週休日パターン</label>
+                        <div class="holiday-pattern-grid">
+                            <div class="week-pattern">
+                                <div class="week-pattern-header">第1週</div>
+                                <div class="weekdays">
+                                    <div class="weekday-checkbox">
+                                        <span>日</span>
+                                        <input type="checkbox" data-week="1" data-day="0" checked onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>月</span>
+                                        <input type="checkbox" data-week="1" data-day="1" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>火</span>
+                                        <input type="checkbox" data-week="1" data-day="2" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>水</span>
+                                        <input type="checkbox" data-week="1" data-day="3" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>木</span>
+                                        <input type="checkbox" data-week="1" data-day="4" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>金</span>
+                                        <input type="checkbox" data-week="1" data-day="5" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>土</span>
+                                        <input type="checkbox" data-week="1" data-day="6" checked onchange="updateCalendar()">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="week-pattern">
+                                <div class="week-pattern-header">第2週</div>
+                                <div class="weekdays">
+                                    <div class="weekday-checkbox">
+                                        <span>日</span>
+                                        <input type="checkbox" data-week="2" data-day="0" checked onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>月</span>
+                                        <input type="checkbox" data-week="2" data-day="1" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>火</span>
+                                        <input type="checkbox" data-week="2" data-day="2" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>水</span>
+                                        <input type="checkbox" data-week="2" data-day="3" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>木</span>
+                                        <input type="checkbox" data-week="2" data-day="4" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>金</span>
+                                        <input type="checkbox" data-week="2" data-day="5" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>土</span>
+                                        <input type="checkbox" data-week="2" data-day="6" checked onchange="updateCalendar()">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="week-pattern">
+                                <div class="week-pattern-header">第3週</div>
+                                <div class="weekdays">
+                                    <div class="weekday-checkbox">
+                                        <span>日</span>
+                                        <input type="checkbox" data-week="3" data-day="0" checked onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>月</span>
+                                        <input type="checkbox" data-week="3" data-day="1" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>火</span>
+                                        <input type="checkbox" data-week="3" data-day="2" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>水</span>
+                                        <input type="checkbox" data-week="3" data-day="3" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>木</span>
+                                        <input type="checkbox" data-week="3" data-day="4" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>金</span>
+                                        <input type="checkbox" data-week="3" data-day="5" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>土</span>
+                                        <input type="checkbox" data-week="3" data-day="6" checked onchange="updateCalendar()">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="week-pattern">
+                                <div class="week-pattern-header">第4週</div>
+                                <div class="weekdays">
+                                    <div class="weekday-checkbox">
+                                        <span>日</span>
+                                        <input type="checkbox" data-week="4" data-day="0" checked onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>月</span>
+                                        <input type="checkbox" data-week="4" data-day="1" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>火</span>
+                                        <input type="checkbox" data-week="4" data-day="2" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>水</span>
+                                        <input type="checkbox" data-week="4" data-day="3" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>木</span>
+                                        <input type="checkbox" data-week="4" data-day="4" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>金</span>
+                                        <input type="checkbox" data-week="4" data-day="5" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>土</span>
+                                        <input type="checkbox" data-week="4" data-day="6" checked onchange="updateCalendar()">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="week-pattern">
+                                <div class="week-pattern-header">第5週</div>
+                                <div class="weekdays">
+                                    <div class="weekday-checkbox">
+                                        <span>日</span>
+                                        <input type="checkbox" data-week="5" data-day="0" checked onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>月</span>
+                                        <input type="checkbox" data-week="5" data-day="1" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>火</span>
+                                        <input type="checkbox" data-week="5" data-day="2" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>水</span>
+                                        <input type="checkbox" data-week="5" data-day="3" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>木</span>
+                                        <input type="checkbox" data-week="5" data-day="4" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>金</span>
+                                        <input type="checkbox" data-week="5" data-day="5" onchange="updateCalendar()">
+                                    </div>
+                                    <div class="weekday-checkbox">
+                                        <span>土</span>
+                                        <input type="checkbox" data-week="5" data-day="6" checked onchange="updateCalendar()">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            <!-- Calendar Area -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="calendar-header">
+                        <h2 class="card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span id="calendar-title">カレンダー</span>
+                        </h2>
+                        <div class="calendar-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="checkLegalRequirements()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 11 12 14 22 4"></polyline>
+                                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                                </svg>
+                                法定要件チェック
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="calendar-content">
+                    <!-- Calendar content will be generated here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-text">
+                1年単位変形労働時間制カレンダー作成ツール v1.0
+            </div>
+        </div>
+    </footer>
+
+    <!-- Manual Modal -->
+    <div id="manualModal" class="modal-overlay" style="display: none;" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title">使い方マニュアル</h2>
+                <button class="modal-close" onclick="closeManual()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="manual-section">
+                    <h3>1. 基本設定</h3>
+                    <p>左側の設定パネルで以下の項目を設定します：</p>
+                    <ul class="manual-list">
+                        <li><strong>起算日</strong>：1年間の開始日を設定します（例：4月1日）</li>
+                        <li><strong>1日の所定労働時間</strong>：通常の勤務時間を設定します（例：8時間）</li>
+                        <li><strong>週の開始曜日</strong>：カレンダーの週の始まりを設定します</li>
+                    </ul>
+                </div>
+
+                <div class="manual-section">
+                    <h3>2. 休日設定</h3>
+                    <p>「休日設定」タブで以下を設定できます：</p>
+                    <ul class="manual-list">
+                        <li><strong>祝日の扱い</strong>：国民の祝日を休日とするかチェックします</li>
+                        <li><strong>週休日パターン</strong>：第1週〜第5週の休日パターンを設定します</li>
+                    </ul>
+                </div>
+
+                <div class="manual-section">
+                    <h3>3. 個別調整機能</h3>
+                    <p>特定の日付の勤務状態や労働時間を個別に調整できます：</p>
+                    <div class="individual-adjust-section">
+                        <h4 style="font-weight: 600; margin-bottom: 0.5rem;">個別日付の調整</h4>
+                        <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem;">カレンダー上の日付をクリックして、その日の設定を変更できます。</p>
+                        
+                        <div style="border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; background: white; margin: 1rem 0;">
+                            <h4 style="font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem;">2025年4月15日の調整</h4>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">日付タイプ</label>
+                                <select style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                                    <option value="work" selected>勤務日</option>
+                                    <option value="rest">休日</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">労働時間</label>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="number" style="flex: 1; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" value="8" min="0" max="24" step="0.5">
+                                    <span style="color: #6b7280;">時間</span>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                <button style="background: #2563eb; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.375rem; cursor: pointer;">保存</button>
+                                <button style="background: #6b7280; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.375rem; cursor: pointer;">リセット</button>
+                                <button style="background: #6b7280; color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.375rem; cursor: pointer;">キャンセル</button>
+                            </div>
+                        </div>
+                        
+                        <p style="font-size: 0.75rem; color: #9ca3af; margin-top: 1rem;">
+                            ※ 調整した内容は自動的に法定要件チェックに反映されます
+                        </p>
+                    </div>
+                </div>
+
+                <div class="manual-section">
+                    <h3>4. カレンダー表示</h3>
+                    <ul class="manual-list">
+                        <li><strong>黄色の背景</strong>：休日</li>
+                        <li><strong>赤色の背景</strong>：祝日</li>
+                        <li><strong>白色の背景</strong>：勤務日</li>
+                        <li>各日付には労働時間が表示されます</li>
+                    </ul>
+                </div>
+
+                <div class="manual-section">
+                    <h3>5. 法定要件チェック</h3>
+                    <p>「法定要件チェック」ボタンをクリックすると、労働基準法に基づく以下の7つの項目を確認できます：</p>
+                    <ul class="manual-list">
+                        <li><strong>労働日数</strong>：年間労働日数が280日を超えていないか</li>
+                        <li><strong>週の最長労働時間</strong>：1週の最長労働時間が52時間を超えていないか</li>
+                        <li><strong>日の最長労働時間</strong>：1日の最長労働時間が10時間を超えていないか</li>
+                        <li><strong>連続労働日数</strong>：連続労働日数が6日（特定期間は12日）を超えていないか</li>
+                        <li><strong>週平均労働時間</strong>：対象期間の総労働時間が週平均40時間を超えていないか</li>
+                        <li><strong>48時間超の週の連続</strong>：48時間を超える週が連続していないか</li>
+                        <li><strong>48時間超の週の回数</strong>：起算日から3か月ごとに区切った各期間において48時間超の週の初日が3回を超えていないか</li>
+                    </ul>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-top: 1rem;">
+                        ※ これらすべての要件を満たす必要があります。1つでも基準を超えると法令違反となります。
+                    </p>
+                </div>
+
+                <div class="manual-section">
+                    <h3>6. 設定の保存・読み込み</h3>
+                    <ul class="manual-list">
+                        <li><strong>設定を保存</strong>：
+                            <ul>
+                                <li>ヘッダーの「設定を保存」ボタンをクリック</li>
+                                <li>設定がJSONファイルとしてダウンロードされます</li>
+                                <li>ファイル名例：「MyCompany_Settings_2025-06-28.json」</li>
+                                <li>会社名と保存日時が自動でファイル名に含まれます</li>
+                            </ul>
+                        </li>
+                        <li><strong>設定を読込</strong>：
+                            <ul>
+                                <li>ヘッダーの「設定を読込」ボタンをクリック</li>
+                                <li>ファイル選択画面が表示されます</li>
+                                <li>保存したJSONファイルを選択してください</li>
+                                <li>全ての設定（週パターン、個別調整含む）が復元されます</li>
+                            </ul>
+                        </li>
+                        <li><strong>メリット</strong>：
+                            <ul>
+                                <li>設定を他のパソコンでも使用可能</li>
+                                <li>複数の会社や期間の設定を管理可能</li>
+                                <li>データのバックアップが安全</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="manual-section">
+                    <h3>7. PDF出力</h3>
+                    <ul class="manual-list">
+                        <li><strong>PDF出力</strong>：カレンダーをPDF形式で出力します</li>
+                        <li><strong>出力内容</strong>：
+                            <ul>
+                                <li>1ページ目：年間カレンダー概要（全12ヶ月を一覧表示）</li>
+                                <li>2ページ目以降：各月の詳細カレンダー（労働時間、統計情報付き）</li>
+                                <li>美しい色分け：休日（薄い黄色）、祝日（薄いピンク）、勤務日（白）</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global calendar data
+        let calendarData = null;
+        let individualAdjustments = {}; // 個別調整を保存するオブジェクト
+        
+        // Japanese holidays for 2025
+        const japaneseHolidays2025 = [
+            { date: new Date(2025, 0, 1), name: '元日' },
+            { date: new Date(2025, 0, 13), name: '成人の日' },
+            { date: new Date(2025, 1, 11), name: '建国記念の日' },
+            { date: new Date(2025, 1, 23), name: '天皇誕生日' },
+            { date: new Date(2025, 1, 24), name: '振替休日' },
+            { date: new Date(2025, 2, 20), name: '春分の日' },
+            { date: new Date(2025, 3, 29), name: '昭和の日' },
+            { date: new Date(2025, 4, 3), name: '憲法記念日' },
+            { date: new Date(2025, 4, 4), name: 'みどりの日' },
+            { date: new Date(2025, 4, 5), name: 'こどもの日' },
+            { date: new Date(2025, 4, 6), name: '振替休日' },
+            { date: new Date(2025, 6, 21), name: '海の日' },
+            { date: new Date(2025, 7, 11), name: '山の日' },
+            { date: new Date(2025, 8, 15), name: '敬老の日' },
+            { date: new Date(2025, 8, 23), name: '秋分の日' },
+            { date: new Date(2025, 9, 13), name: 'スポーツの日' },
+            { date: new Date(2025, 10, 3), name: '文化の日' },
+            { date: new Date(2025, 10, 23), name: '勤労感謝の日' },
+            { date: new Date(2025, 10, 24), name: '振替休日' }
+        ];
+        
+        // Japanese holidays for 2026
+        const japaneseHolidays2026 = [
+            { date: new Date(2026, 0, 1), name: '元日' },
+            { date: new Date(2026, 0, 12), name: '成人の日' },
+            { date: new Date(2026, 1, 11), name: '建国記念の日' },
+            { date: new Date(2026, 1, 23), name: '天皇誕生日' },
+            { date: new Date(2026, 2, 20), name: '春分の日' },
+            { date: new Date(2026, 3, 29), name: '昭和の日' }
+        ];
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => tab.classList.remove('active'));
+            
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => button.classList.remove('active'));
+            
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Get week number in month
+        function getWeekNumberInMonth(date) {
+            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+            const dayOfMonth = date.getDate();
+            return Math.ceil((dayOfMonth + firstDay.getDay()) / 7);
+        }
+
+        // Get rest days for a week
+        function getRestDaysForWeek(weekNumber) {
+            // 6週目以降は第5週のパターンを適用
+            const effectiveWeekNumber = weekNumber > 5 ? 5 : weekNumber;
+            
+            const restDays = [];
+            for (let day = 0; day < 7; day++) {
+                const checkbox = document.querySelector(`input[data-week="${effectiveWeekNumber}"][data-day="${day}"]`);
+                if (checkbox && checkbox.checked) {
+                    restDays.push(day);
+                }
+            }
+            return restDays;
+        }
+
+        // Check if date is a holiday
+        function isHoliday(date) {
+            const includeNationalHolidays = document.getElementById('includeNationalHolidays').checked;
+            if (!includeNationalHolidays) return false;
+            
+            const holidays = [...japaneseHolidays2025, ...japaneseHolidays2026];
+            return holidays.some(holiday => 
+                holiday.date.getFullYear() === date.getFullYear() &&
+                holiday.date.getMonth() === date.getMonth() &&
+                holiday.date.getDate() === date.getDate()
+            );
+        }
+
+        // Get holiday name
+        function getHolidayName(date) {
+            const holidays = [...japaneseHolidays2025, ...japaneseHolidays2026];
+            const holiday = holidays.find(h => 
+                h.date.getFullYear() === date.getFullYear() &&
+                h.date.getMonth() === date.getMonth() &&
+                h.date.getDate() === date.getDate()
+            );
+            return holiday ? holiday.name : null;
+        }
+
+        // Generate calendar data
+        function generateCalendarData(startDate, endDate) {
+            const days = [];
+            const current = new Date(startDate);
+            const dailyHours = parseFloat(document.getElementById('dailyHours').value);
+            
+            while (current <= endDate) {
+                const dateKey = formatDateKey(current);
+                const weekNumber = getWeekNumberInMonth(current);
+                const dayOfWeek = current.getDay();
+                const restDays = getRestDaysForWeek(weekNumber);
+                const isRestDay = restDays.includes(dayOfWeek);
+                const isHolidayDay = isHoliday(current);
+                
+                // 個別調整をチェック
+                if (individualAdjustments[dateKey]) {
+                    const adjustment = individualAdjustments[dateKey];
+                    days.push({
+                        date: new Date(current),
+                        dayOfWeek: dayOfWeek,
+                        weekNumber: weekNumber,
+                        isWorkDay: adjustment.type === 'work',
+                        isHoliday: isHolidayDay,
+                        holidayName: getHolidayName(current),
+                        workHours: adjustment.hours || 0,
+                        isAdjusted: true
+                    });
+                } else {
+                    days.push({
+                        date: new Date(current),
+                        dayOfWeek: dayOfWeek,
+                        weekNumber: weekNumber,
+                        isWorkDay: !isRestDay && !isHolidayDay,
+                        isHoliday: isHolidayDay,
+                        holidayName: getHolidayName(current),
+                        workHours: (!isRestDay && !isHolidayDay) ? dailyHours : 0,
+                        isAdjusted: false
+                    });
+                }
+                
+                current.setDate(current.getDate() + 1);
+            }
+            
+            return days;
+        }
+
+        // Format date key for adjustments
+        function formatDateKey(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        // Generate full calendar
+        function generateFullCalendar() {
+            const startDateInput = document.getElementById('startDate').value;
+            if (!startDateInput) {
+                alert('起算日を入力してください。');
+                return;
+            }
+            
+            const startDate = new Date(startDateInput);
+            const endDate = new Date(startDate);
+            endDate.setFullYear(endDate.getFullYear() + 1);
+            endDate.setDate(endDate.getDate() - 1);
+            
+            calendarData = generateCalendarData(startDate, endDate);
+            renderCalendar(calendarData);
+            
+            // Update title
+            document.getElementById('calendar-title').textContent = 
+                `${startDate.getFullYear()}年度カレンダー (${startDate.getFullYear()}年${startDate.getMonth() + 1}月〜${endDate.getFullYear()}年${endDate.getMonth() + 1}月)`;
+        }
+
+        // Render calendar
+        function renderCalendar(data) {
+            const container = document.getElementById('calendar-content');
+            container.innerHTML = '';
+            
+            // Create statistics
+            const stats = calculateStatistics(data);
+            const statsHtml = `
+                <div class="statistics-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.totalWorkHours}</div>
+                        <div class="stat-label">年間総労働時間</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.totalWorkDays}</div>
+                        <div class="stat-label">年間労働日数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.totalRestDays}</div>
+                        <div class="stat-label">年間休日数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.averageWeeklyHours.toFixed(1)}</div>
+                        <div class="stat-label">週平均労働時間</div>
+                    </div>
+                </div>
+            `;
+            
+            // Create calendar grid
+            const calendarGrid = document.createElement('div');
+            calendarGrid.className = 'calendar-container';
+            calendarGrid.innerHTML = statsHtml + '<div class="calendar-grid" id="month-calendars"></div>';
+            container.appendChild(calendarGrid);
+            
+            // Generate monthly calendars
+            const monthsContainer = document.getElementById('month-calendars');
+            const months = groupByMonth(data);
+            
+            months.forEach(monthData => {
+                const monthCalendar = createMonthCalendar(monthData);
+                monthsContainer.appendChild(monthCalendar);
+            });
+        }
+
+        // Group days by month
+        function groupByMonth(days) {
+            const months = {};
+            
+            days.forEach(day => {
+                const key = `${day.date.getFullYear()}-${day.date.getMonth()}`;
+                if (!months[key]) {
+                    months[key] = {
+                        year: day.date.getFullYear(),
+                        month: day.date.getMonth(),
+                        days: []
+                    };
+                }
+                months[key].days.push(day);
+            });
+            
+            return Object.values(months).sort((a, b) => {
+                if (a.year !== b.year) return a.year - b.year;
+                return a.month - b.month;
+            });
+        }
+
+        // Create month calendar element
+        function createMonthCalendar(monthData) {
+            const monthDiv = document.createElement('div');
+            monthDiv.className = 'month-calendar';
+            
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+            const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
+            
+            // Month header
+            const header = document.createElement('div');
+            header.className = 'month-header';
+            header.textContent = `${monthData.year}年${monthNames[monthData.month]}`;
+            monthDiv.appendChild(header);
+            
+            // Calendar table
+            const table = document.createElement('table');
+            table.className = 'calendar-table';
+            
+            // Week headers
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            weekDays.forEach((day, index) => {
+                const th = document.createElement('th');
+                th.textContent = day;
+                if (index === 0) th.style.color = '#dc2626';
+                if (index === 6) th.style.color = '#2563eb';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            // Calendar body
+            const tbody = document.createElement('tbody');
+            const firstDay = new Date(monthData.year, monthData.month, 1);
+            const lastDay = new Date(monthData.year, monthData.month + 1, 0);
+            const startPadding = firstDay.getDay();
+            
+            let currentDate = 1;
+            let weekCount = 0;
+            
+            while (currentDate <= lastDay.getDate() || weekCount < 6) {
+                const row = document.createElement('tr');
+                let hasValidDays = false;
+                
+                for (let day = 0; day < 7; day++) {
+                    const cell = document.createElement('td');
+                    
+                    if ((weekCount === 0 && day < startPadding)) {
+                        // 月の最初の週の空白部分
+                        cell.innerHTML = '<div class="calendar-day empty-day"></div>';
+                    } else if (currentDate > lastDay.getDate()) {
+                        // 月末を超えた部分
+                        cell.innerHTML = '<div class="calendar-day empty-day"></div>';
+                    } else {
+                        // 有効な日付
+                        hasValidDays = true;
+                        const dayData = monthData.days.find(d => d.date.getDate() === currentDate);
+                        if (dayData) {
+                            const dayDiv = document.createElement('div');
+                            dayDiv.className = 'calendar-day';
+                            
+                            if (dayData.isHoliday) {
+                                dayDiv.classList.add('holiday');
+                                dayDiv.title = dayData.holidayName;
+                            } else if (!dayData.isWorkDay) {
+                                dayDiv.classList.add('rest');
+                            } else {
+                                dayDiv.classList.add('work');
+                            }
+                            
+                            if (day === 0) dayDiv.classList.add('sunday');
+                            if (day === 6) dayDiv.classList.add('saturday');
+                            
+                            dayDiv.innerHTML = `
+                                <div class="day-number">${currentDate}</div>
+                                ${dayData.workHours > 0 ? `<div class="day-hours">${dayData.workHours}h</div>` : ''}
+                            `;
+                            
+                            // 個別調整のマーク
+                            if (dayData.isAdjusted) {
+                                dayDiv.style.border = '2px solid #2563eb';
+                            }
+                            
+                            // クリックイベントを追加
+                            dayDiv.addEventListener('click', () => openDayAdjustment(dayData));
+                            
+                            cell.appendChild(dayDiv);
+                        }
+                        currentDate++;
+                    }
+                    
+                    row.appendChild(cell);
+                }
+                
+                tbody.appendChild(row);
+                weekCount++;
+                
+                // 有効な日付がない場合や6週目まで表示したら終了
+                if ((!hasValidDays && currentDate > lastDay.getDate()) || weekCount >= 6) {
+                    break;
+                }
+            }
+            
+            table.appendChild(tbody);
+            monthDiv.appendChild(table);
+            
+            return monthDiv;
+        }
+
+        // Calculate statistics
+        function calculateStatistics(days) {
+            const totalWorkHours = days.reduce((sum, day) => sum + day.workHours, 0);
+            const totalWorkDays = days.filter(day => day.isWorkDay).length;
+            const totalRestDays = days.filter(day => !day.isWorkDay).length;
+            const averageWeeklyHours = totalWorkHours / 52;
+            
+            return {
+                totalWorkHours,
+                totalWorkDays,
+                totalRestDays,
+                averageWeeklyHours
+            };
+        }
+
+        // Calculate weekly working hours
+        function calculateWeeklyHours(days) {
+            const weeks = [];
+            let currentWeek = [];
+            
+            days.forEach((day, index) => {
+                const dayOfWeek = day.date.getDay();
+                
+                // 日曜日の場合、新しい週を開始
+                if (dayOfWeek === 0 && currentWeek.length > 0) {
+                    weeks.push(currentWeek);
+                    currentWeek = [];
+                }
+                
+                currentWeek.push(day);
+                
+                // 最後の日の場合、現在の週を追加
+                if (index === days.length - 1 && currentWeek.length > 0) {
+                    weeks.push(currentWeek);
+                }
+            });
+            
+            // 各週の労働時間を計算
+            const weeklyHours = weeks.map(week => {
+                return week.reduce((sum, day) => sum + day.workHours, 0);
+            });
+            
+            const maxWeeklyHours = Math.max(...weeklyHours);
+            
+            return {
+                weeklyHours,
+                maxWeeklyHours
+            };
+        }
+
+        // Calculate consecutive working days
+        function calculateConsecutiveWorkDays(days) {
+            let maxConsecutiveDays = 0;
+            let currentConsecutiveDays = 0;
+            
+            days.forEach(day => {
+                if (day.isWorkDay && day.workHours > 0) {
+                    currentConsecutiveDays++;
+                    maxConsecutiveDays = Math.max(maxConsecutiveDays, currentConsecutiveDays);
+                } else {
+                    currentConsecutiveDays = 0;
+                }
+            });
+            
+            return maxConsecutiveDays;
+        }
+
+        // Check for consecutive weeks over 48 hours
+        function checkConsecutiveOvertime(weeklyHours) {
+            let maxConsecutiveOvertimeWeeks = 0;
+            let currentConsecutiveOvertimeWeeks = 0;
+            
+            weeklyHours.forEach(hours => {
+                if (hours > 48) {
+                    currentConsecutiveOvertimeWeeks++;
+                    maxConsecutiveOvertimeWeeks = Math.max(maxConsecutiveOvertimeWeeks, currentConsecutiveOvertimeWeeks);
+                } else {
+                    currentConsecutiveOvertimeWeeks = 0;
+                }
+            });
+            
+            return maxConsecutiveOvertimeWeeks;
+        }
+
+        // Check 48+ hour weeks in 3-month periods
+        function checkQuarterlyOvertimeWeeks(days, weeklyHours) {
+            if (days.length === 0) return { maxQuarterlyOvertimeWeeks: 0, hasViolation: false };
+            
+            const startDate = days[0].date;
+            let maxQuarterlyOvertimeWeeks = 0;
+            let hasViolation = false;
+            
+            // 3か月ごとに区切って確認
+            for (let quarter = 0; quarter < 4; quarter++) {
+                const quarterStart = new Date(startDate);
+                quarterStart.setMonth(startDate.getMonth() + quarter * 3);
+                
+                const quarterEnd = new Date(quarterStart);
+                quarterEnd.setMonth(quarterStart.getMonth() + 3);
+                quarterEnd.setDate(quarterEnd.getDate() - 1);
+                
+                let overtimeWeeksInQuarter = 0;
+                let weekIndex = 0;
+                
+                // その四半期の週を確認
+                days.forEach((day, dayIndex) => {
+                    if (day.date >= quarterStart && day.date <= quarterEnd) {
+                        // 週の開始日（日曜日）の場合
+                        if (day.date.getDay() === 0 && weekIndex < weeklyHours.length) {
+                            if (weeklyHours[weekIndex] > 48) {
+                                overtimeWeeksInQuarter++;
+                            }
+                            weekIndex++;
+                        }
+                    }
+                });
+                
+                maxQuarterlyOvertimeWeeks = Math.max(maxQuarterlyOvertimeWeeks, overtimeWeeksInQuarter);
+                if (overtimeWeeksInQuarter > 3) {
+                    hasViolation = true;
+                }
+            }
+            
+            return { maxQuarterlyOvertimeWeeks, hasViolation };
+        }
+
+        // Check legal requirements
+        function checkLegalRequirements() {
+            if (!calendarData) {
+                alert('先にカレンダーを生成してください。');
+                return;
+            }
+            
+            const stats = calculateStatistics(calendarData);
+            const weeklyStats = calculateWeeklyHours(calendarData);
+            const consecutiveDays = calculateConsecutiveWorkDays(calendarData);
+            const consecutiveOvertimeWeeks = checkConsecutiveOvertime(weeklyStats.weeklyHours);
+            const quarterlyOvertimeCheck = checkQuarterlyOvertimeWeeks(calendarData, weeklyStats.weeklyHours);
+            const maxDailyHours = Math.max(...calendarData.map(day => day.workHours));
+            
+            // 7つのチェック項目を定義
+            const checkItems = [
+                {
+                    label: '労働日数が280日を超えていないか',
+                    value: `${stats.totalWorkDays}日`,
+                    isValid: stats.totalWorkDays <= 280
+                },
+                {
+                    label: '1週の最長労働時間が52時間を超えていないか',
+                    value: `${weeklyStats.maxWeeklyHours}時間`,
+                    isValid: weeklyStats.maxWeeklyHours <= 52
+                },
+                {
+                    label: '1日の最長労働時間が10時間を超えていないか',
+                    value: `${maxDailyHours}時間`,
+                    isValid: maxDailyHours <= 10
+                },
+                {
+                    label: '連続労働日数が6日（特定期間は12日）を超えていないか',
+                    value: `${consecutiveDays}日`,
+                    isValid: consecutiveDays <= 6
+                },
+                {
+                    label: '対象期間の総労働時間が週平均40時間を超えていないか',
+                    value: `${stats.averageWeeklyHours.toFixed(1)}時間`,
+                    isValid: stats.averageWeeklyHours <= 40
+                },
+                {
+                    label: '48時間を超える週が連続していないか',
+                    value: `${consecutiveOvertimeWeeks}週`,
+                    isValid: consecutiveOvertimeWeeks <= 1
+                },
+                {
+                    label: '起算日から3か月ごとに区切った各期間において48時間超の週の初日が3回を超えていないか',
+                    value: `${quarterlyOvertimeCheck.maxQuarterlyOvertimeWeeks}回`,
+                    isValid: !quarterlyOvertimeCheck.hasViolation
+                }
+            ];
+            
+            // Display results
+            const container = document.getElementById('calendar-content');
+            const existingCheck = container.querySelector('.legal-check-table');
+            if (existingCheck) existingCheck.remove();
+            
+            const checkDiv = document.createElement('div');
+            checkDiv.className = 'legal-check-table';
+            
+            checkDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0; color: #333;">法定要件チェック結果</h3>
+                    <button onclick="closeLegalCheck()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                        ✕ 閉じる
+                    </button>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; margin: 0; font-size: 14px;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa;">
+                            <th style="border: 1px solid #dee2e6; padding: 12px; text-align: left; font-weight: bold;">チェック項目</th>
+                            <th style="border: 1px solid #dee2e6; padding: 12px; text-align: center; font-weight: bold; width: 100px;">値</th>
+                            <th style="border: 1px solid #dee2e6; padding: 12px; text-align: center; font-weight: bold; width: 80px;">結果</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${checkItems.map(item => `
+                            <tr>
+                                <td style="border: 1px solid #dee2e6; padding: 12px;">${item.label}</td>
+                                <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center;">${item.value}</td>
+                                <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center; background-color: ${item.isValid ? '#d4edda' : '#f8d7da'};">
+                                    <span style="color: ${item.isValid ? '#155724' : '#721c24'}; font-size: 28px; font-weight: bold;">
+                                        ${item.isValid ? '○' : '×'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.insertBefore(checkDiv, container.firstChild);
+        }
+
+        // Close legal check results
+        function closeLegalCheck() {
+            const container = document.getElementById('calendar-content');
+            const existingCheck = container.querySelector('.legal-check-table');
+            if (existingCheck) {
+                existingCheck.remove();
+            }
+        }
+
+        // Update calendar on change
+        function updateCalendar() {
+            if (calendarData) {
+                generateFullCalendar();
+            }
+        }
+
+        // Save settings（ファイルダウンロード）
+        function saveSettings() {
+            const settings = {
+                companyName: document.getElementById('companyName').value,
+                startDate: document.getElementById('startDate').value,
+                dailyHours: document.getElementById('dailyHours').value,
+                weekStart: document.getElementById('weekStart').value,
+                includeNationalHolidays: document.getElementById('includeNationalHolidays').checked,
+                weekPatterns: {},
+                individualAdjustments: individualAdjustments,
+                savedDate: new Date().toISOString().split('T')[0] // 保存日時を追加
+            };
+            
+            // Save week patterns
+            for (let week = 1; week <= 5; week++) {
+                settings.weekPatterns[week] = [];
+                for (let day = 0; day < 7; day++) {
+                    const checkbox = document.querySelector(`input[data-week="${week}"][data-day="${day}"]`);
+                    if (checkbox && checkbox.checked) {
+                        settings.weekPatterns[week].push(day);
+                    }
+                }
+            }
+            
+            // ファイル名生成
+            const companyName = settings.companyName || 'Calendar';
+            const today = new Date().toISOString().split('T')[0];
+            const fileName = `${companyName}_Settings_${today}.json`;
+            
+            // JSONファイルとしてダウンロード
+            const jsonStr = JSON.stringify(settings, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // ブラウザにも保存（バックアップ）
+            localStorage.setItem('calendarSettings', JSON.stringify(settings));
+            alert('設定ファイルをダウンロードしました。');
+        }
+
+        // Load settings（ファイル選択）
+        function loadSettings() {
+            // ファイル選択用のinput要素を作成
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const settings = JSON.parse(e.target.result);
+                        
+                        // 設定を適用
+                        document.getElementById('companyName').value = settings.companyName || '';
+                        document.getElementById('startDate').value = settings.startDate;
+                        document.getElementById('dailyHours').value = settings.dailyHours;
+                        document.getElementById('weekStart').value = settings.weekStart;
+                        document.getElementById('includeNationalHolidays').checked = settings.includeNationalHolidays;
+                        
+                        // Load week patterns
+                        for (let week = 1; week <= 5; week++) {
+                            for (let day = 0; day < 7; day++) {
+                                const checkbox = document.querySelector(`input[data-week="${week}"][data-day="${day}"]`);
+                                if (checkbox) {
+                                    checkbox.checked = settings.weekPatterns[week].includes(day);
+                                }
+                            }
+                        }
+                        
+                        // Load individual adjustments
+                        if (settings.individualAdjustments) {
+                            individualAdjustments = settings.individualAdjustments;
+                        }
+                        
+                        // ブラウザにも保存（バックアップ）
+                        localStorage.setItem('calendarSettings', JSON.stringify(settings));
+                        
+                        alert('設定ファイルを読み込みました。');
+                        updateCalendar();
+                        
+                    } catch (error) {
+                        alert('設定ファイルの形式が正しくありません。');
+                    }
+                };
+                reader.readAsText(file);
+            });
+            
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            document.body.removeChild(fileInput);
+        }
+        
+        // ブラウザ保存から読み込み（従来機能も残す）
+        function loadFromBrowser() {
+            const savedSettings = localStorage.getItem('calendarSettings');
+            if (!savedSettings) {
+                alert('ブラウザに保存された設定がありません。');
+                return;
+            }
+            
+            const settings = JSON.parse(savedSettings);
+            
+            document.getElementById('companyName').value = settings.companyName || '';
+            document.getElementById('startDate').value = settings.startDate;
+            document.getElementById('dailyHours').value = settings.dailyHours;
+            document.getElementById('weekStart').value = settings.weekStart;
+            document.getElementById('includeNationalHolidays').checked = settings.includeNationalHolidays;
+            
+            // Load week patterns
+            for (let week = 1; week <= 5; week++) {
+                for (let day = 0; day < 7; day++) {
+                    const checkbox = document.querySelector(`input[data-week="${week}"][data-day="${day}"]`);
+                    if (checkbox) {
+                        checkbox.checked = settings.weekPatterns[week].includes(day);
+                    }
+                }
+            }
+            
+            // Load individual adjustments
+            if (settings.individualAdjustments) {
+                individualAdjustments = settings.individualAdjustments;
+            }
+            
+            alert('ブラウザ保存から設定を読み込みました。');
+            updateCalendar();
+        }
+
+        // 年間カレンダー概要ページを作成
+        function createYearlyOverview(doc, months, year) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            
+            // 年タイトル
+            doc.setFontSize(24);
+            doc.setTextColor(17, 24, 39);
+            const yearTitle = `${year} Calendar`;
+            const titleWidth = doc.getTextWidth(yearTitle);
+            doc.text(yearTitle, (297 - titleWidth) / 2, 12);
+            
+            // 3列×4行のレイアウト
+            const cols = 3;
+            const rows = 4;
+            const calendarWidth = 80;
+            const calendarHeight = 42;
+            const marginX = 15;
+            const marginY = 20;
+            const spacingX = 12;
+            const spacingY = 4;
+            
+            months.forEach((monthData, monthIndex) => {
+                const col = monthIndex % cols;
+                const row = Math.floor(monthIndex / cols);
+                const x = marginX + col * (calendarWidth + spacingX);
+                const y = marginY + row * (calendarHeight + spacingY);
+                
+                // 月タイトル
+                doc.setFontSize(12);
+                doc.setTextColor(17, 24, 39);
+                const monthTitle = monthNames[monthData.month];
+                const monthTitleWidth = doc.getTextWidth(monthTitle);
+                doc.text(monthTitle, x + (calendarWidth - monthTitleWidth) / 2, y + 8);
+                
+                // 曜日ヘッダー
+                const cellWidth = calendarWidth / 7;
+                const cellHeight = 5;
+                const headerY = y + 12;
+                
+                doc.setFontSize(8);
+                weekDays.forEach((day, dayIndex) => {
+                    const cellX = x + dayIndex * cellWidth;
+                    
+                    // 背景色
+                    if (dayIndex === 0) { // 日曜日
+                        doc.setFillColor(255, 230, 230); // 薄いピンク
+                    } else if (dayIndex === 6) { // 土曜日
+                        doc.setFillColor(230, 240, 255); // 薄い青
+                    } else {
+                        doc.setFillColor(245, 245, 245); // 薄いグレー
+                    }
+                    doc.rect(cellX, headerY, cellWidth, cellHeight, 'F');
+                    
+                    // 文字
+                    doc.setTextColor(100, 100, 100); // ダークグレー文字
+                    const dayWidth = doc.getTextWidth(day);
+                    doc.text(day, cellX + (cellWidth - dayWidth) / 2, headerY + 3.5);
+                });
+                
+                // カレンダー日付
+                const firstDay = new Date(monthData.year, monthData.month, 1);
+                const lastDay = new Date(monthData.year, monthData.month + 1, 0);
+                const startPadding = firstDay.getDay();
+                
+                let currentDate = 1;
+                for (let week = 0; week < 6; week++) {
+                    const rowY = headerY + cellHeight + week * cellHeight;
+                    
+                    for (let day = 0; day < 7; day++) {
+                        const cellIndex = week * 7 + day;
+                        const cellX = x + day * cellWidth;
+                        
+                        if (cellIndex >= startPadding && currentDate <= lastDay.getDate()) {
+                            const dayData = monthData.days.find(d => d.date.getDate() === currentDate);
+                            
+                            // 背景色
+                            if (dayData) {
+                                if (dayData.isHoliday) {
+                                    doc.setFillColor(255, 230, 230); // 祝日：薄いピンク
+                                } else if (!dayData.isWorkDay) {
+                                    doc.setFillColor(255, 250, 220); // 休日：薄い黄色
+                                } else {
+                                    doc.setFillColor(255, 255, 255); // 勤務日：白
+                                }
+                                doc.rect(cellX, rowY, cellWidth, cellHeight, 'F');
+                            }
+                            
+                            // 境界線
+                            doc.setDrawColor(156, 163, 175);
+                            doc.setLineWidth(0.2);
+                            doc.rect(cellX, rowY, cellWidth, cellHeight);
+                            
+                            // 日付テキスト
+                            doc.setFontSize(7);
+                            if (day === 0) { // 日曜日
+                                doc.setTextColor(220, 100, 100); // 薄い赤
+                            } else if (day === 6) { // 土曜日
+                                doc.setTextColor(100, 150, 220); // 薄い青
+                            } else {
+                                doc.setTextColor(120, 120, 120); // 薄いダークグレー
+                            }
+                            
+                            // 祝日の場合は少し濃い赤文字
+                            if (dayData && dayData.isHoliday) {
+                                doc.setTextColor(200, 80, 80);
+                            }
+                            
+                            const dateWidth = doc.getTextWidth(currentDate.toString());
+                            doc.text(currentDate.toString(), cellX + (cellWidth - dateWidth) / 2, rowY + 3.5);
+                            currentDate++;
+                        } else {
+                            // 空のセル境界線
+                            doc.setDrawColor(200, 200, 200);
+                            doc.setLineWidth(0.1);
+                            doc.rect(cellX, rowY, cellWidth, cellHeight);
+                        }
+                    }
+                    
+                    if (currentDate > lastDay.getDate()) break;
+                }
+            });
+            
+        }
+
+        // PDF出力機能
+        function exportToPDF() {
+            if (!calendarData) {
+                alert('先にカレンダーを生成してください。');
+                return;
+            }
+            
+            const months = groupByMonth(calendarData);
+            const companyName = document.getElementById('companyName').value.trim();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape', 'mm', 'a4');
+            
+            doc.setFont('helvetica');
+            
+            // 1ページ目：年間カレンダー概要
+            const year = months.length > 0 ? months[0].year : new Date().getFullYear();
+            createYearlyOverview(doc, months, year);
+            
+            // 2ページ目以降：各月の詳細カレンダー
+            months.forEach((monthData, monthIndex) => {
+                doc.addPage();
+                
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                const weekDays = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+                
+                // 月タイトル（中央）
+                doc.setFontSize(20);
+                doc.setTextColor(17, 24, 39); // ダークグレー
+                const monthTitle = `${monthData.year} ${monthNames[monthData.month]}`;
+                const titleWidth = doc.getTextWidth(monthTitle);
+                doc.text(monthTitle, (297 - titleWidth) / 2, 25);
+                
+                // カレンダーグリッドの設定
+                const startX = 20;
+                const startY = 40;
+                const cellWidth = 38;
+                const cellHeight = 25;
+                const headerHeight = 12;
+                
+                // 曜日ヘッダー
+                doc.setFontSize(12);
+                doc.setFillColor(245, 245, 245); // 薄いグレー背景
+                doc.rect(startX, startY, cellWidth * 7, headerHeight, 'F');
+                
+                weekDays.forEach((day, index) => {
+                    const x = startX + index * cellWidth;
+                    
+                    // 日曜日と土曜日の背景色
+                    if (index === 0) { // 日曜日
+                        doc.setFillColor(255, 230, 230); // 薄いピンク
+                        doc.rect(x, startY, cellWidth, headerHeight, 'F');
+                    } else if (index === 6) { // 土曜日
+                        doc.setFillColor(230, 240, 255); // 薄い青
+                        doc.rect(x, startY, cellWidth, headerHeight, 'F');
+                    }
+                    
+                    // 曜日テキスト（ダークグレー）
+                    doc.setTextColor(100, 100, 100);
+                    const dayWidth = doc.getTextWidth(day);
+                    doc.text(day, x + (cellWidth - dayWidth) / 2, startY + 8);
+                });
+                
+                // カレンダーデータ作成
+                const firstDay = new Date(monthData.year, monthData.month, 1);
+                const lastDay = new Date(monthData.year, monthData.month + 1, 0);
+                const startPadding = firstDay.getDay();
+                
+                let currentDate = 1;
+                for (let week = 0; week < 6; week++) {
+                    const rowY = startY + headerHeight + week * cellHeight;
+                    
+                    for (let day = 0; day < 7; day++) {
+                        const cellIndex = week * 7 + day;
+                        const x = startX + day * cellWidth;
+                        
+                        // セルの境界線
+                        doc.setDrawColor(200, 200, 200);
+                        doc.rect(x, rowY, cellWidth, cellHeight);
+                        
+                        if (cellIndex >= startPadding && currentDate <= lastDay.getDate()) {
+                            const dayData = monthData.days.find(d => d.date.getDate() === currentDate);
+                            
+                            // セルの背景色
+                            if (dayData) {
+                                if (dayData.isHoliday) {
+                                    // 祝日：薄いピンク背景
+                                    doc.setFillColor(255, 230, 230);
+                                    doc.rect(x, rowY, cellWidth, cellHeight, 'F');
+                                } else if (!dayData.isWorkDay) {
+                                    // 休日：薄い黄背景
+                                    doc.setFillColor(255, 250, 220);
+                                    doc.rect(x, rowY, cellWidth, cellHeight, 'F');
+                                } else {
+                                    // 勤務日：白背景
+                                    doc.setFillColor(255, 255, 255);
+                                    doc.rect(x, rowY, cellWidth, cellHeight, 'F');
+                                }
+                            }
+                            
+                            // 境界線を再描画
+                            doc.setDrawColor(156, 163, 175); // 洗練されたグレー境界線
+                            doc.setLineWidth(0.5);
+                            doc.rect(x, rowY, cellWidth, cellHeight);
+                            
+                            // 日付テキスト
+                            doc.setFontSize(14);
+                            if (day === 0) { // 日曜日
+                                doc.setTextColor(220, 100, 100); // 薄い赤
+                            } else if (day === 6) { // 土曜日
+                                doc.setTextColor(100, 150, 220); // 薄い青
+                            } else {
+                                doc.setTextColor(120, 120, 120); // 薄いダークグレー
+                            }
+                            
+                            // 祝日の場合は少し濃い赤文字
+                            if (dayData && dayData.isHoliday) {
+                                doc.setTextColor(200, 80, 80);
+                            }
+                            
+                            doc.text(currentDate.toString(), x + 3, rowY + 12);
+                            
+                            // 労働時間表示
+                            if (dayData && dayData.workHours > 0) {
+                                doc.setFontSize(10);
+                                doc.text(`${dayData.workHours}h`, x + 3, rowY + 20);
+                            }
+                            
+                            // 状態表示（土日と祝日の文字は表示しない）
+                            if (dayData && !dayData.isWorkDay && !dayData.isHoliday && day !== 0 && day !== 6) {
+                                // 平日の休日のみRを表示
+                                doc.setFontSize(8);
+                                doc.text('R', x + cellWidth - 8, rowY + 8);
+                            }
+                            
+                            currentDate++;
+                        }
+                    }
+                    
+                    if (currentDate > lastDay.getDate()) break;
+                }
+                
+                // 統計情報
+                const statsY = startY + headerHeight + 6 * cellHeight + 20;
+                const stats = {
+                    totalWorkDays: monthData.days.filter(day => day.isWorkDay).length,
+                    totalWorkHours: monthData.days.reduce((sum, day) => sum + day.workHours, 0),
+                    totalRestDays: monthData.days.filter(day => !day.isWorkDay).length
+                };
+                
+                doc.setFontSize(12);
+                doc.setTextColor(55, 65, 81);
+                doc.text('Monthly Statistics', startX, statsY);
+                doc.text(`Work Days: ${stats.totalWorkDays}`, startX, statsY + 8);
+                doc.text(`Work Hours: ${stats.totalWorkHours}h`, startX, statsY + 16);
+                doc.text(`Rest Days: ${stats.totalRestDays}`, startX, statsY + 24);
+            });
+            
+            // ファイル名生成とダウンロード
+            const fileName = companyName ? 
+                `${companyName}_1年単位変形労働時間制カレンダー.pdf` : 
+                '1年単位変形労働時間制カレンダー.pdf';
+            
+            doc.save(fileName);
+        }
+
+
+
+        // マニュアルモーダルを表示
+        function showManual() {
+            document.getElementById('manualModal').style.display = 'flex';
+        }
+
+        // マニュアルモーダルを閉じる
+        function closeManual() {
+            document.getElementById('manualModal').style.display = 'none';
+        }
+
+        // モーダル外クリックで閉じる
+        function closeModal(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                closeManual();
+            }
+        }
+
+        // 日付の個別調整ダイアログを開く
+        function openDayAdjustment(dayData) {
+            const dateStr = formatDateKey(dayData.date);
+            const dateDisplay = `${dayData.date.getFullYear()}年${dayData.date.getMonth() + 1}月${dayData.date.getDate()}日`;
+            
+            // 既存の調整を取得
+            const currentAdjustment = individualAdjustments[dateStr] || {
+                type: dayData.isWorkDay ? 'work' : 'rest',
+                hours: dayData.workHours || 8
+            };
+            
+            // ダイアログのHTML
+            const dialogHtml = `
+                <div class="modal-overlay" id="adjustDialog" onclick="closeDayAdjustment(event)">
+                    <div class="modal" style="max-width: 400px;" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2 class="modal-title">${dateDisplay}の調整</h2>
+                            <button class="modal-close" onclick="closeDayAdjustment()">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="label">日付タイプ</label>
+                                <select class="input" id="dayTypeSelect" onchange="updateHoursInput()">
+                                    <option value="work" ${currentAdjustment.type === 'work' ? 'selected' : ''}>勤務日</option>
+                                    <option value="rest" ${currentAdjustment.type === 'rest' ? 'selected' : ''}>休日</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="label">労働時間</label>
+                                <div class="input-group">
+                                    <input type="number" class="input" id="hoursInput" value="${currentAdjustment.hours}" 
+                                           min="0" max="24" step="0.5" ${currentAdjustment.type !== 'work' ? 'disabled' : ''}>
+                                    <span class="unit">時間</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                                <button class="btn btn-primary" onclick="saveDayAdjustment('${dateStr}')">保存</button>
+                                <button class="btn btn-secondary" onclick="resetDayAdjustment('${dateStr}')">リセット</button>
+                                <button class="btn btn-secondary" onclick="closeDayAdjustment()">キャンセル</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // ダイアログを追加
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = dialogHtml;
+            document.body.appendChild(tempDiv.firstElementChild);
+        }
+
+        // 労働時間入力の有効/無効を切り替え
+        function updateHoursInput() {
+            const typeSelect = document.getElementById('dayTypeSelect');
+            const hoursInput = document.getElementById('hoursInput');
+            
+            if (typeSelect.value === 'work') {
+                hoursInput.disabled = false;
+                if (!hoursInput.value || hoursInput.value === '0') {
+                    hoursInput.value = document.getElementById('dailyHours').value;
+                }
+            } else {
+                hoursInput.disabled = true;
+                hoursInput.value = 0;
+            }
+        }
+
+        // 日付調整を保存
+        function saveDayAdjustment(dateStr) {
+            const type = document.getElementById('dayTypeSelect').value;
+            const hours = parseFloat(document.getElementById('hoursInput').value) || 0;
+            
+            individualAdjustments[dateStr] = {
+                type: type,
+                hours: hours
+            };
+            
+            closeDayAdjustment();
+            updateCalendar();
+        }
+
+        // 日付調整をリセット
+        function resetDayAdjustment(dateStr) {
+            delete individualAdjustments[dateStr];
+            closeDayAdjustment();
+            updateCalendar();
+        }
+
+        // 日付調整ダイアログを閉じる
+        function closeDayAdjustment(event) {
+            if (!event || event.target.classList.contains('modal-overlay')) {
+                const dialog = document.getElementById('adjustDialog');
+                if (dialog) {
+                    dialog.remove();
+                }
+            }
+        }
+
+        // リセット機能
+        function resetToDefault() {
+            if (confirm('すべての設定を初期値にリセットしますか？\n（カスタム設定や個別調整がすべて削除されます）')) {
+                // 基本設定をリセット
+                document.getElementById('companyName').value = '';
+                document.getElementById('startDate').value = '2025-04-01';
+                document.getElementById('dailyHours').value = '8';
+                document.getElementById('weekStart').value = 'sunday';
+                document.getElementById('includeNationalHolidays').checked = true;
+                
+                // 週休日パターンをリセット（日曜日と土曜日のみチェック）
+                for (let week = 1; week <= 5; week++) {
+                    for (let day = 0; day < 7; day++) {
+                        const checkbox = document.querySelector(`input[data-week="${week}"][data-day="${day}"]`);
+                        if (checkbox) {
+                            // 日曜日（0）と土曜日（6）のみチェック
+                            checkbox.checked = (day === 0 || day === 6);
+                        }
+                    }
+                }
+                
+                // 個別調整をクリア
+                individualAdjustments = {};
+                
+                // ローカルストレージをクリア
+                localStorage.removeItem('calendarSettings');
+                
+                // カレンダーを更新
+                updateCalendar();
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('1年単位変形労働時間制カレンダー作成ツール が読み込まれました');
+            
+            // Generate initial calendar
+            generateFullCalendar();
+        });
+    </script>
+</body>
+</html>
